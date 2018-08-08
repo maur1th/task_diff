@@ -21,6 +21,18 @@ impl Line {
     }
 }
 
+fn parse_environment(env: &Value) -> Option<Value> {
+    let mut result: Map<String, Value> = Map::new();
+    for t in env.as_array()?.iter() {
+        let map = t.as_object()?;
+        result.insert(
+            map.get("name")?.as_str()?.to_owned(),
+            map.get("value")?.to_owned(),
+        );
+    }
+    return Some(json!(&result));
+}
+
 fn diff(t: &Value, u: &Value) -> Option<Vec<Line>> {
     let mut new_u = u.clone();
     let u_obj = new_u.as_object_mut()?;
@@ -49,6 +61,19 @@ fn diff(t: &Value, u: &Value) -> Option<Vec<Line>> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn test_parse_environment() {
+        let env = json!([
+            {"name": "foo", "value": "bar"},
+            {"name": "baz", "value": "qux"},
+        ]);
+        let result = json!({
+            "foo": "bar",
+            "baz": "qux",
+        });
+        assert_eq!(parse_environment(&env).unwrap(), result);
+    }
 
     #[test]
     fn test_diff_map_delete() {
