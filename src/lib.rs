@@ -1,10 +1,34 @@
 use std::fmt;
+use std::io::{self, Error, ErrorKind};
 
 #[macro_use]
 extern crate serde_json;
 use serde_json::{Map, Value};
 
-struct Line {
+pub struct Pair {
+    pub a: Value,
+    pub b: Value,
+}
+
+impl Pair {
+    fn clean_string(s: &str) -> Result<Value, serde_json::Error> {
+        // let pattern: &[_] = &['"', '[', ']'];
+        let mut result = s.trim().trim_matches('"').to_owned();
+        result.retain(|c| c != '\\');
+        serde_json::from_str(&result)
+    }
+
+    pub fn new(s: &str) -> io::Result<Pair> {
+        let separator = " => ";
+        let index = s.find(separator)
+            .ok_or(Error::new(ErrorKind::InvalidInput, "Wrong input"))?;
+        let a = Pair::clean_string(&s[..index])?;
+        let b = Pair::clean_string(&s[index + separator.len()..])?;
+        Ok(Pair { a, b })
+    }
+}
+
+pub struct Line {
     diff: char,
     depth: usize,
     contents: String,
@@ -115,11 +139,14 @@ fn diff_array(a: &Vec<Value>, b: &Vec<Value>) -> Vec<Line> {
     result
 }
 
-fn diff(a: &Value, b: &Value) -> Option<Vec<Line>> {
+pub fn diff(a: &Value, b: &Value) -> io::Result<Vec<Line>> {
     match (&a, &b) {
-        (Value::Object(a), Value::Object(b)) => Some(diff_obj(a, b)),
-        (Value::Array(a), Value::Array(b)) => Some(diff_array(a, b)),
-        _ => None,
+        (Value::Object(a), Value::Object(b)) => Ok(diff_obj(a, b)),
+        (Value::Array(a), Value::Array(b)) => Ok(diff_array(a, b)),
+        _ => Err(Error::new(
+            ErrorKind::InvalidInput,
+            "Different types cannot be compared",
+        )),
     }
 }
 
@@ -227,7 +254,7 @@ mod tests {
     fn test_diff_array_vs_obj() {
         let a = json!({});
         let b = json!([]);
-        assert!(diff(&a, &b).is_none());
+        assert!(diff(&a, &b).is_err());
     }
 
     #[test]

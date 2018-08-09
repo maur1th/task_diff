@@ -5,3 +5,4 @@ authors = ["Thomas Maurin <maur1th@users.noreply.github.com>"]
 
 [dependencies]
 serde_json = "1.0"
+ncurses = "5.94.0"
