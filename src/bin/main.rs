@@ -5,7 +5,7 @@ extern crate ncurses;
 use ncurses::*;
 
 extern crate task_diff;
-use task_diff::{diff, Pair};
+use task_diff::{parser, util};
 
 fn get_input() -> String {
     /* Setup ncurses. */
@@ -39,8 +39,8 @@ fn get_input() -> String {
 
 fn run_app() -> io::Result<()> {
     let input = get_input();
-    let pair = Pair::new(&input)?;
-    let result = diff(&pair.a, &pair.b)?;
+    let pair = util::Pair::new(&input)?;
+    let result = parser::diff(&pair.a, &pair.b)?;
     for line in result {
         println!("{}", line);
     }
