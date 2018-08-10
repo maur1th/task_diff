@@ -4,6 +4,31 @@ use serde_json::{self, Map, Value};
 
 use util::{parse_environment, wrap, zip_to_end, Line};
 
+//
+// Entrypoint function
+//
+
+pub fn diff(a: &Value, b: &Value) -> io::Result<Vec<Line>> {
+    match (a, b) {
+        (Value::Object(a), Value::Object(b)) => {
+            let mut a2 = a.clone();
+            let mut b2 = b.clone();
+            let env_diff = diff_env(a2.remove("environment"), b2.remove("environment"));
+            let diff = diff_obj(&a2, &b2);
+            Ok(diff.into_iter().chain(env_diff.into_iter()).collect())
+        }
+        (Value::Array(a), Value::Array(b)) => Ok(diff_array(a.clone(), b.clone())),
+        _ => Err(Error::new(
+            ErrorKind::InvalidInput,
+            "Different types cannot be compared",
+        )),
+    }
+}
+
+//
+// Helper functions
+//
+
 fn diff_obj(a: &Map<String, Value>, b: &Map<String, Value>) -> Vec<Line> {
     let mut new_b = b.clone();
     let mut result: Vec<Line> = a
@@ -70,29 +95,16 @@ fn diff_env(a: Option<Value>, b: Option<Value>) -> Vec<Line> {
     }
 }
 
-pub fn diff(a: &Value, b: &Value) -> io::Result<Vec<Line>> {
-    match (a, b) {
-        (Value::Object(a), Value::Object(b)) => {
-            let mut a2 = a.clone();
-            let mut b2 = b.clone();
-            let env_diff = diff_env(a2.remove("environment"), b2.remove("environment"));
-            let diff = diff_obj(&a2, &b2);
-            Ok(diff.into_iter().chain(env_diff.into_iter()).collect())
-        }
-        (Value::Array(a), Value::Array(b)) => Ok(diff_array(a.clone(), b.clone())),
-        _ => Err(Error::new(
-            ErrorKind::InvalidInput,
-            "Different types cannot be compared",
-        )),
-    }
-}
+//
+// Tests
+//
 
 #[cfg(test)]
 mod tests {
     use super::*;
 
     #[test]
-    fn test_diff_obj_delete() {
+    fn diff_obj_delete() {
         let a = json!({
             "foo": "same",
             "baz": "removed",
@@ -117,7 +129,7 @@ mod tests {
     }
 
     #[test]
-    fn test_diff_array_obj() {
+    fn diff_array_obj() {
         let a = json!([
             {"foo": "same", "baz": "removed"},
             {"qux": "will change"},
@@ -144,7 +156,7 @@ mod tests {
     }
 
     #[test]
-    fn test_diff_array_obj_removed() {
+    fn diff_array_obj_removed() {
         let a = json!([
             {"foo": "same"},
             {"baz": "removed"},
@@ -162,7 +174,7 @@ mod tests {
     }
 
     #[test]
-    fn test_diff_array() {
+    fn diff_array() {
         let a = json!([1, 2]);
         let b = json!([1, 2, 3]);
         let result: Vec<String> = diff(&a, &b)
@@ -175,28 +187,28 @@ mod tests {
     }
 
     #[test]
-    fn test_diff_array_vs_obj() {
+    fn diff_array_vs_obj() {
         let a = json!({});
         let b = json!([]);
         assert!(diff(&a, &b).is_err());
     }
 
     #[test]
-    fn test_diff_obj_empty() {
+    fn diff_obj_empty() {
         let a = json!({});
         let b = json!({});
         assert!(diff(&a, &b).unwrap().is_empty());
     }
 
     #[test]
-    fn test_diff_array_empty() {
+    fn diff_array_empty() {
         let a = json!([]);
         let b = json!([]);
         assert!(diff(&a, &b).unwrap().is_empty());
     }
 
     #[test]
-    fn test_diff_env() {
+    fn diff_env() {
         let a = json!({
             "environment": [
                 {"name": "foo", "value": "kept"},
