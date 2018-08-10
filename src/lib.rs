@@ -12,7 +12,6 @@ pub struct Pair {
 
 impl Pair {
     fn clean_string(s: &str) -> Result<Value, serde_json::Error> {
-        // let pattern: &[_] = &['"', '[', ']'];
         let mut result = s.trim().trim_matches('"').to_owned();
         result.retain(|c| c != '\\');
         serde_json::from_str(&result)
@@ -104,41 +103,40 @@ fn wrap(lines: Vec<Line>, name: &str) -> Vec<Line> {
     result
 }
 
-fn diff_obj_array(a: &[Value], b: &[Value]) -> Vec<Line> {
-    let mut result: Vec<Line> = vec![];
-    for (a, b) in a.iter().zip(b.iter()) {
-        let lines = diff(a, b).unwrap();
-        result.append(&mut wrap(lines, ""));
-    }
-    let delta: usize = ((a.len() - b.len()) as i32).abs() as usize;
-    let empty_map: Map<String, Value> = Map::new();
-    if a.len() < b.len() {
-        result.extend(b[delta..].iter().flat_map(|v| {
-            let lines = diff_obj(&empty_map, v.as_object().unwrap());
-            wrap(lines, "")
-        }));
-    } else if a.len() > b.len() {
-        result.extend(a[delta..].iter().flat_map(|v| {
-            let lines = diff_obj(v.as_object().unwrap(), &empty_map);
-            wrap(lines, "")
-        }));
+fn zip_to_end(a: Vec<Value>, b: Vec<Value>) -> Vec<(Option<Value>, Option<Value>)> {
+    let mut result = Vec::<(Option<Value>, Option<Value>)>::new();
+    let mut iter_a = a.into_iter();
+    let mut iter_b = b.into_iter();
+    loop {
+        let next_a = iter_a.next();
+        let next_b = iter_b.next();
+        if next_a.is_none() && next_b.is_none() {
+            break;
+        }
+        result.push((next_a, next_b));
     }
     result
 }
 
-fn diff_array(a: &Vec<Value>, b: &Vec<Value>) -> Vec<Line> {
-    let mut result: Vec<Line> = vec![];
+fn diff_array(a: Vec<Value>, b: Vec<Value>) -> Vec<Line> {
     if a.iter().chain(b.iter()).all(|v| v.is_object()) {
-        let lines = diff_obj_array(a, b);
-        result.extend(lines);
+        let empty_map = json!({});
+        let zip = zip_to_end(a, b);
+        zip.iter()
+            .flat_map(|(a, b)| match (a, b) {
+                (Some(a), Some(b)) => wrap(diff(a, b).unwrap(), ""),
+                (Some(a), None) => wrap(diff(a, &empty_map).unwrap(), ""),
+                (None, Some(b)) => wrap(diff(&empty_map, b).unwrap(), ""),
+                _ => vec![],
+            })
+            .collect()
     } else {
         let to_json = |t| serde_json::to_value(t).unwrap();
-        result.push(Line::new(
+        vec![Line::new(
             '~',
             format!(r#"{} => {}"#, to_json(a), to_json(b)),
-        ))
+        )]
     }
-    result
 }
 
 fn diff_env(a: Option<Value>, b: Option<Value>) -> Vec<Line> {
@@ -171,7 +169,7 @@ pub fn diff(a: &Value, b: &Value) -> io::Result<Vec<Line>> {
             let diff = diff_obj(&a2, &b2);
             Ok(diff.into_iter().chain(env_diff.into_iter()).collect())
         }
-        (Value::Array(a), Value::Array(b)) => Ok(diff_array(&a, &b)),
+        (Value::Array(a), Value::Array(b)) => Ok(diff_array(a.clone(), b.clone())),
         _ => Err(Error::new(
             ErrorKind::InvalidInput,
             "Different types cannot be compared",
