@@ -20,7 +20,8 @@ impl Pair {
 
     pub fn new(s: &str) -> io::Result<Pair> {
         let separator = " => ";
-        let index = s.find(separator)
+        let index = s
+            .find(separator)
             .ok_or(Error::new(ErrorKind::InvalidInput, "Wrong input"))?;
         let a = Pair::clean_string(&s[..index])?;
         let b = Pair::clean_string(&s[index + separator.len()..])?;
@@ -68,7 +69,8 @@ fn parse_environment(env: &Value) -> Option<Value> {
 
 fn diff_obj(a: &Map<String, Value>, b: &Map<String, Value>) -> Vec<Line> {
     let mut new_b = b.clone();
-    let mut result: Vec<Line> = a.iter()
+    let mut result: Vec<Line> = a
+        .iter()
         .map(|(key, val)| {
             if let Some(u_val) = new_b.remove(key) {
                 if val == &u_val {
@@ -89,10 +91,10 @@ fn diff_obj(a: &Map<String, Value>, b: &Map<String, Value>) -> Vec<Line> {
     result
 }
 
-fn wrap(lines: Vec<Line>) -> Vec<Line> {
+fn wrap(lines: Vec<Line>, name: &str) -> Vec<Line> {
     let mut result: Vec<Line> = vec![];
     if !lines.is_empty() {
-        result.push(Line::new('.', "{".to_owned()));
+        result.push(Line::new('.', format!("{}{{", name)));
         for mut line in lines {
             line.depth += 1;
             result.push(line);
@@ -105,20 +107,20 @@ fn wrap(lines: Vec<Line>) -> Vec<Line> {
 fn diff_obj_array(a: &[Value], b: &[Value]) -> Vec<Line> {
     let mut result: Vec<Line> = vec![];
     for (a, b) in a.iter().zip(b.iter()) {
-        let lines = diff_obj(a.as_object().unwrap(), b.as_object().unwrap());
-        result.append(&mut wrap(lines));
+        let lines = diff(a, b).unwrap();
+        result.append(&mut wrap(lines, ""));
     }
     let delta: usize = ((a.len() - b.len()) as i32).abs() as usize;
     let empty_map: Map<String, Value> = Map::new();
     if a.len() < b.len() {
         result.extend(b[delta..].iter().flat_map(|v| {
             let lines = diff_obj(&empty_map, v.as_object().unwrap());
-            wrap(lines)
+            wrap(lines, "")
         }));
     } else if a.len() > b.len() {
         result.extend(a[delta..].iter().flat_map(|v| {
             let lines = diff_obj(v.as_object().unwrap(), &empty_map);
-            wrap(lines)
+            wrap(lines, "")
         }));
     }
     result
@@ -139,10 +141,37 @@ fn diff_array(a: &Vec<Value>, b: &Vec<Value>) -> Vec<Line> {
     result
 }
 
+fn diff_env(a: Option<Value>, b: Option<Value>) -> Vec<Line> {
+    match (a, b) {
+        (Some(a), Some(b)) => {
+            let a_env = parse_environment(&a);
+            let b_env = parse_environment(&b);
+            let lines = diff_obj(
+                a_env
+                    .expect("Invalid environment value")
+                    .as_object()
+                    .unwrap(),
+                b_env
+                    .expect("Invalid environment value")
+                    .as_object()
+                    .unwrap(),
+            );
+            wrap(lines, "\"environment\": ")
+        }
+        _ => vec![],
+    }
+}
+
 pub fn diff(a: &Value, b: &Value) -> io::Result<Vec<Line>> {
-    match (&a, &b) {
-        (Value::Object(a), Value::Object(b)) => Ok(diff_obj(a, b)),
-        (Value::Array(a), Value::Array(b)) => Ok(diff_array(a, b)),
+    match (a, b) {
+        (Value::Object(a), Value::Object(b)) => {
+            let mut a2 = a.clone();
+            let mut b2 = b.clone();
+            let env_diff = diff_env(a2.remove("environment"), b2.remove("environment"));
+            let diff = diff_obj(&a2, &b2);
+            Ok(diff.into_iter().chain(env_diff.into_iter()).collect())
+        }
+        (Value::Array(a), Value::Array(b)) => Ok(diff_array(&a, &b)),
         _ => Err(Error::new(
             ErrorKind::InvalidInput,
             "Different types cannot be compared",
@@ -269,5 +298,36 @@ mod tests {
         let a = json!([]);
         let b = json!([]);
         assert!(diff(&a, &b).unwrap().is_empty());
+    }
+
+    #[test]
+    fn test_diff_env() {
+        let a = json!({
+            "environment": [
+                {"name": "foo", "value": "kept"},
+                {"name": "bar", "value": "removed"},
+                {"name": "qux", "value": "will change"},
+            ]
+        });
+        let b = json!({
+            "environment": [
+                {"name": "foo", "value": "kept"},
+                {"name": "baz", "value": "added"},
+                {"name": "qux", "value": "changed!"},
+            ]
+        });
+        let result: Vec<String> = diff(&a, &b)
+            .unwrap()
+            .iter()
+            .map(|l| format!("{}", l))
+            .collect();
+        let expected = vec![
+            r#""environment": {"#,
+            r#"  - "bar": "removed""#,
+            r#"  + "baz": "added""#,
+            r#"  ~ "qux": "will change" => "changed!""#,
+            r#"}"#,
+        ];
+        assert_eq!(result, expected);
     }
 }
