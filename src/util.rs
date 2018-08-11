@@ -19,7 +19,7 @@ impl Pair {
         let separator = " => ";
         let index = s
             .find(separator)
-            .ok_or(Error::new(ErrorKind::InvalidInput, "Wrong input"))?;
+            .ok_or(Error::new(ErrorKind::InvalidInput, "Invalid input"))?;
         let a = Pair::clean_string(&s[..index])?;
         let b = Pair::clean_string(&s[index + separator.len()..])?;
         Ok(Pair { a, b })
