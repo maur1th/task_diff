@@ -4,6 +4,9 @@ use std::io;
 extern crate ncurses;
 use ncurses::*;
 
+extern crate colored;
+use colored::*;
+
 extern crate task_diff;
 use task_diff::{parser, util};
 
@@ -42,7 +45,14 @@ fn run_app() -> io::Result<()> {
     let pair = util::Pair::new(&input)?;
     let result = parser::diff(&pair.a, &pair.b)?;
     for line in result {
-        println!("{}", line);
+        let color = match line.diff {
+            '+' => "cyan",
+            '~' => "yellow",
+            '-' => "red",
+            _ => "white",
+        };
+        let output = format!("{}", line);
+        println!("{}", output.color(color));
     }
     Ok(())
 }
