@@ -7,3 +7,16 @@ matrix:
   allow_failures:
     - rust: nightly
   fast_finish: true
+
+before_deploy:
+  - cargo build --release
+  - mv target/release/{main,task_diff}
+  - bzip2 -f target/release/task_diff
+deploy:
+  skip_cleanup: true
+  provider: releases
+  api_key: $GITHUB_TOKEN
+  file: target/release/task_diff.bz2
+  on:
+    tags: true
+    rust: stable
