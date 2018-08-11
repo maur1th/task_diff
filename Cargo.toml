@@ -1,7 +1,16 @@
 [package]
 name = "task_diff"
+description = "Create Terraform AWS Container Definition diffs"
+keywords = ["terraform", "aws", "ecs", "task-definition"]
+categories = ["development-tools"]
+license = "Apache-2.0"
+repository = "https://github.com/maur1th/task_diff"
 version = "0.1.0"
 authors = ["Thomas Maurin <maur1th@users.noreply.github.com>"]
+readme = "README.md"
+
+[badges]
+travis-ci = { repository = "maur1th/task_diff", branch = "master" }
 
 [dependencies]
 serde_json = "1.0"
