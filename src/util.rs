@@ -1,5 +1,5 @@
 use std::fmt;
-use std::io::{self, Error, ErrorKind};
+use std::io::{self, Error, ErrorKind::InvalidInput};
 
 use serde_json::{self, Map, Value};
 
@@ -15,13 +15,21 @@ impl Pair {
         serde_json::from_str(&result)
     }
 
-    pub fn new(s: &str) -> io::Result<Pair> {
+    fn trim(input: &str) -> Option<&str> {
+        let start = input.find('"')?;
+        let end = input.rfind('"')?;
+        Some(&input[start..end])
+    }
+
+    pub fn new(input: &str) -> io::Result<Pair> {
+        let error = "Invalid input";
+        let trimmed = Pair::trim(input).ok_or(Error::new(InvalidInput, error))?;
         let separator = " => ";
-        let index = s
+        let index = trimmed
             .find(separator)
-            .ok_or(Error::new(ErrorKind::InvalidInput, "Invalid input"))?;
-        let a = Pair::clean_string(&s[..index])?;
-        let b = Pair::clean_string(&s[index + separator.len()..])?;
+            .ok_or(Error::new(InvalidInput, error))?;
+        let a = Pair::clean_string(&trimmed[..index])?;
+        let b = Pair::clean_string(&trimmed[index + separator.len()..])?;
         Ok(Pair { a, b })
     }
 }
