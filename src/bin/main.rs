@@ -11,32 +11,27 @@ extern crate task_diff;
 use task_diff::{parser, util};
 
 fn get_input() -> String {
-    /* Setup ncurses. */
+    // Setup ncurses
     initscr();
     raw();
 
-    /* Allow for extended keyboard (like F1). */
+    // Allow for extended keyboard (like F1)
     keypad(stdscr(), true);
     noecho();
 
-    /* Prompt for a character. */
-    printw("Please enter your diff, must start with double quotes (ENTER / ESC once done):\n");
+    printw("Please enter your diff (ENTER / ESC once done):\n");
     let mut input = String::new();
-    let mut started = false;
     loop {
         let ch = getch();
         match ch {
             10 | 27 => break, // Return if ENTER or ESC
-            _ => {
+            32...126 => {
+                // match printable ASCII characters
                 let c = char::from_u32(ch as u32).expect("Invalid char");
-                if started || c == '"' {
-                    printw(&format!("{}", c));
-                    input.push(c);
-                    if !started {
-                        started = true;
-                    }
-                }
+                printw(&format!("{}", c));
+                input.push(c);
             }
+            _ => (),
         }
         refresh();
     }
