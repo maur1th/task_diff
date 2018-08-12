@@ -20,18 +20,23 @@ fn get_input() -> String {
     noecho();
 
     /* Prompt for a character. */
-    printw("Please enter your diff (ENTER / ESC once done):\n");
+    printw("Please enter your diff, must start with double quotes (ENTER / ESC once done):\n");
     let mut input = String::new();
+    let mut started = false;
     loop {
         let ch = getch();
-        // Return if ENTER or ESC
-        if ch == 10 || ch == 27 {
-            refresh();
-            break;
-        } else {
-            let c = char::from_u32(ch as u32).expect("Invalid char");
-            printw(&format!("{}", c));
-            input.push(c);
+        match ch {
+            10 | 27 => break, // Return if ENTER or ESC
+            _ => {
+                let c = char::from_u32(ch as u32).expect("Invalid char");
+                if started || c == '"' {
+                    printw(&format!("{}", c));
+                    input.push(c);
+                    if !started {
+                        started = true;
+                    }
+                }
+            }
         }
         refresh();
     }
