@@ -5,7 +5,7 @@ keywords = ["terraform", "aws", "ecs", "task-definition"]
 categories = ["development-tools"]
 license = "Apache-2.0"
 repository = "https://github.com/maur1th/task_diff"
-version = "0.1.0"
+version = "0.1.2"
 authors = ["Thomas Maurin <maur1th@users.noreply.github.com>"]
 readme = "README.md"
 
