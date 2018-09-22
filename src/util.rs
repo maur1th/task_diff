@@ -10,8 +10,7 @@ pub struct Pair {
 
 impl Pair {
     fn clean_string(s: &str) -> Result<Value, serde_json::Error> {
-        let mut result = s.trim().trim_matches('"').to_owned();
-        result.retain(|c| c != '\\');
+        let result = s.trim().trim_matches('"').to_owned();
         serde_json::from_str(&result)
     }
 

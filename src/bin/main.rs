@@ -4,6 +4,9 @@ use std::io;
 extern crate ncurses;
 use ncurses::*;
 
+extern crate unescape;
+use unescape::unescape;
+
 extern crate colored;
 use colored::*;
 
@@ -42,7 +45,7 @@ fn get_input() -> String {
 
 fn run_app() -> io::Result<()> {
     let input = get_input();
-    let pair = util::Pair::new(&input)?;
+    let pair = util::Pair::new(unescape(&input).expect("Invalid input").as_str())?;
     let result = parser::diff(&pair.a, &pair.b)?;
     for line in result {
         let color = match line.diff {
