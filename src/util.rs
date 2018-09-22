@@ -98,25 +98,3 @@ pub fn zip_to_end(a: Vec<Value>, b: Vec<Value>) -> Vec<(Option<Value>, Option<Va
     }
     result
 }
-
-//
-// Tests
-//
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn parse_environment_array() {
-        let env = json!([
-            {"name": "foo", "value": "bar"},
-            {"name": "baz", "value": "qux"},
-        ]);
-        let result = json!({
-            "foo": "bar",
-            "baz": "qux",
-        });
-        assert_eq!(parse_environment(&env).unwrap(), result);
-    }
-}

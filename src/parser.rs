@@ -43,8 +43,7 @@ fn diff_obj(a: &Map<String, Value>, b: &Map<String, Value>) -> Vec<Line> {
             } else {
                 Line::new('-', format!(r#""{}": {}"#, key, val))
             }
-        })
-        .filter(|l| l.diff != 'x')
+        }).filter(|l| l.diff != 'x')
         .collect();
     for (key, val) in new_b.iter() {
         result.push(Line::new('+', format!(r#""{}": {}"#, key, val)))
@@ -63,8 +62,7 @@ fn diff_array(a: Vec<Value>, b: Vec<Value>) -> Vec<Line> {
                 (Some(a), None) => wrap(diff(a, &empty_map).unwrap(), ""),
                 (None, Some(b)) => wrap(diff(&empty_map, b).unwrap(), ""),
                 _ => vec![],
-            })
-            .collect()
+            }).collect()
     } else {
         let to_json = |t| serde_json::to_value(t).unwrap();
         vec![Line::new(
@@ -92,149 +90,5 @@ fn diff_env(a: Option<Value>, b: Option<Value>) -> Vec<Line> {
             wrap(lines, "\"environment\": ")
         }
         _ => vec![],
-    }
-}
-
-//
-// Tests
-//
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn diff_obj_delete() {
-        let a = json!({
-            "foo": "same",
-            "baz": "removed",
-            "qux": "will change",
-        });
-        let b = json!({
-            "foo": "same",
-            "quux": "added",
-            "qux": "changed!",
-        });
-        let result: Vec<String> = diff(&a, &b)
-            .unwrap()
-            .iter()
-            .map(|l| format!("{}", l))
-            .collect();
-        let expected = vec![
-            r#"- "baz": "removed""#,
-            r#"+ "quux": "added""#,
-            r#"~ "qux": "will change" => "changed!""#,
-        ];
-        assert_eq!(result, expected);
-    }
-
-    #[test]
-    fn diff_array_obj() {
-        let a = json!([
-            {"foo": "same", "baz": "removed"},
-            {"qux": "will change"},
-        ]);
-        let b = json!([
-            {"foo": "same"},
-            {"quux": "added", "qux": "changed!"},
-        ]);
-        let result: Vec<String> = diff(&a, &b)
-            .unwrap()
-            .iter()
-            .map(|l| format!("{}", l))
-            .collect();
-        let expected = vec![
-            r#"{"#,
-            r#"  - "baz": "removed""#,
-            r#"}"#,
-            r#"{"#,
-            r#"  + "quux": "added""#,
-            r#"  ~ "qux": "will change" => "changed!""#,
-            r#"}"#,
-        ];
-        assert_eq!(result, expected);
-    }
-
-    #[test]
-    fn diff_array_obj_removed() {
-        let a = json!([
-            {"foo": "same"},
-            {"baz": "removed"},
-        ]);
-        let b = json!([
-            {"foo": "same"},
-        ]);
-        let result: Vec<String> = diff(&a, &b)
-            .unwrap()
-            .iter()
-            .map(|l| format!("{}", l))
-            .collect();
-        let expected = vec![r#"{"#, r#"  - "baz": "removed""#, r#"}"#];
-        assert_eq!(result, expected);
-    }
-
-    #[test]
-    fn diff_array() {
-        let a = json!([1, 2]);
-        let b = json!([1, 2, 3]);
-        let result: Vec<String> = diff(&a, &b)
-            .unwrap()
-            .iter()
-            .map(|l| format!("{}", l))
-            .collect();
-        let expected = vec![r#"~ [1,2] => [1,2,3]"#];
-        assert_eq!(result, expected);
-    }
-
-    #[test]
-    fn diff_array_vs_obj() {
-        let a = json!({});
-        let b = json!([]);
-        assert!(diff(&a, &b).is_err());
-    }
-
-    #[test]
-    fn diff_obj_empty() {
-        let a = json!({});
-        let b = json!({});
-        assert!(diff(&a, &b).unwrap().is_empty());
-    }
-
-    #[test]
-    fn diff_array_empty() {
-        let a = json!([]);
-        let b = json!([]);
-        assert!(diff(&a, &b).unwrap().is_empty());
-    }
-
-    #[test]
-    fn diff_env() {
-        let a = json!({
-            "environment": [
-                {"name": "foo", "value": "kept"},
-                {"name": "bar", "value": "removed"},
-                {"name": "qux", "value": "will change"},
-            ]
-        });
-        let b = json!({
-            "environment": [
-                {"name": "foo", "value": "kept"},
-                {"name": "baz", "value": "added"},
-                {"name": "qux", "value": "changed!"},
-            ]
-        });
-        let result: Vec<String> = diff(&a, &b)
-            .unwrap()
-            .iter()
-            .map(|l| format!("{}", l))
-            .collect();
-        let expected = vec![
-            r#""environment": {"#,
-            r#"  - "bar": "removed""#,
-            r#"  + "baz": "added""#,
-            r#"  ~ "qux": "will change" => "changed!""#,
-            r#"}"#,
-        ];
-        assert_eq!(result, expected);
     }
 }
