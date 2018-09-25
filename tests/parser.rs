@@ -20,16 +20,18 @@ mod tests {
             "quux": "added",
             "qux": "changed!",
         });
-        let result: Vec<String> = parser::diff(&a, &b)
+        let mut result: Vec<String> = parser::diff(&a, &b)
             .unwrap()
             .iter()
             .map(|l| format!("{}", l))
             .collect();
-        let expected = vec![
+        let mut expected = vec![
             r#"- "baz": "removed""#,
             r#"+ "quux": "added""#,
             r#"~ "qux": "will change" => "changed!""#,
         ];
+        result.sort_unstable();
+        expected.sort_unstable();
         assert_eq!(result, expected);
     }
 
@@ -43,12 +45,12 @@ mod tests {
             {"foo": "same"},
             {"quux": "added", "qux": "changed!"},
         ]);
-        let result: Vec<String> = parser::diff(&a, &b)
+        let mut result: Vec<String> = parser::diff(&a, &b)
             .unwrap()
             .iter()
             .map(|l| format!("{}", l))
             .collect();
-        let expected = vec![
+        let mut expected = vec![
             r#"{"#,
             r#"  - "baz": "removed""#,
             r#"}"#,
@@ -57,6 +59,8 @@ mod tests {
             r#"  ~ "qux": "will change" => "changed!""#,
             r#"}"#,
         ];
+        result.sort_unstable();
+        expected.sort_unstable();
         assert_eq!(result, expected);
     }
 
@@ -115,31 +119,33 @@ mod tests {
     #[test]
     fn diff_env() {
         let a = json!({
-            "environment": [
-                {"name": "foo", "value": "kept"},
-                {"name": "bar", "value": "removed"},
-                {"name": "qux", "value": "will change"},
-            ]
+            "environment": {
+                "foo": "kept",
+                "bar": "removed",
+                "qux": "will change",
+            }
         });
         let b = json!({
-            "environment": [
-                {"name": "foo", "value": "kept"},
-                {"name": "baz", "value": "added"},
-                {"name": "qux", "value": "changed!"},
-            ]
+            "environment": {
+                "foo": "kept",
+                "baz": "added",
+                "qux": "changed!",
+            }
         });
-        let result: Vec<String> = parser::diff(&a, &b)
+        let mut result: Vec<String> = parser::diff(&a, &b)
             .unwrap()
             .iter()
             .map(|l| format!("{}", l))
             .collect();
-        let expected = vec![
+        let mut expected = vec![
             r#""environment": {"#,
             r#"  - "bar": "removed""#,
             r#"  + "baz": "added""#,
             r#"  ~ "qux": "will change" => "changed!""#,
             r#"}"#,
         ];
+        result.sort_unstable();
+        expected.sort_unstable();
         assert_eq!(result, expected);
     }
 }

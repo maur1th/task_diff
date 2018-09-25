@@ -9,9 +9,11 @@ pub struct Pair {
 }
 
 impl Pair {
-    fn clean_string(s: &str) -> Result<Value, serde_json::Error> {
+    fn clean_string(s: &str) -> io::Result<Value> {
         let result = s.trim().trim_matches('"').to_owned();
-        serde_json::from_str(&result)
+        let value = serde_json::from_str(&result)?;
+        replace_in_tree("environment", value, parse_environment)
+            .ok_or(Error::new(InvalidInput, "Invalid input"))
     }
 
     fn trim(input: &str) -> Option<&str> {
@@ -71,6 +73,30 @@ pub fn parse_environment(env: &Value) -> Option<Value> {
     return Some(json!(&result));
 }
 
+pub fn replace_in_tree<F>(key: &str, tree: Value, mut f: F) -> Option<Value>
+where
+    F: FnMut(&Value) -> Option<Value> + Copy,
+{
+    match tree {
+        Value::Object(object) => {
+            let mut new_object = object.clone();
+            if let Some(value) = object.get(key) {
+                new_object.insert(key.to_owned(), f(value)?);
+            }
+            Some(Value::Object(new_object))
+        }
+        Value::Array(array) => {
+            let mut new_array: Vec<Value> = vec![];
+            for item in array {
+                new_array.push(replace_in_tree(key, item, f)?);
+            }
+            Some(Value::Array(new_array))
+        }
+        _ => Some(tree),
+    }
+}
+
+// TODO: Move into Line implem
 pub fn wrap(lines: Vec<Line>, name: &str) -> Vec<Line> {
     let mut result: Vec<Line> = vec![];
     if !lines.is_empty() {
