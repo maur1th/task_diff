@@ -2,7 +2,7 @@
 extern crate serde_json;
 
 extern crate task_diff;
-use task_diff::util;
+use task_diff::pair::{parse_environment, replace_in_tree};
 
 #[cfg(test)]
 mod tests {
@@ -18,7 +18,7 @@ mod tests {
             "foo": "bar",
             "baz": "qux",
         });
-        assert_eq!(util::parse_environment(&env).unwrap(), result);
+        assert_eq!(parse_environment(&env).unwrap(), result);
     }
 
     #[test]
@@ -36,7 +36,7 @@ mod tests {
             }
         });
         assert_eq!(
-            util::replace_in_tree("environment", env, util::parse_environment).unwrap(),
+            replace_in_tree("environment", env, parse_environment).unwrap(),
             result
         );
     }
@@ -56,7 +56,7 @@ mod tests {
             }
         }]);
         assert_eq!(
-            util::replace_in_tree("environment", env, util::parse_environment).unwrap(),
+            replace_in_tree("environment", env, parse_environment).unwrap(),
             result
         );
     }

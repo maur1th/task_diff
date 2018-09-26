@@ -2,7 +2,9 @@ use std::io::{self, Error, ErrorKind};
 
 use serde_json::{self, Map, Value};
 
-use util::{wrap, zip_to_end, Line};
+use util::zip_to_end;
+
+use line::Line;
 
 //
 // Entrypoint function
@@ -29,7 +31,7 @@ fn diff_obj(a: &Map<String, Value>, b: &Map<String, Value>) -> Vec<Line> {
         .iter()
         .flat_map(|(key, val)| match b2.remove(key) {
             Some(ref bval) if val == bval => vec![Line::new('x', String::new())],
-            Some(ref bval) if val.is_object() && bval.is_object() => wrap(
+            Some(ref bval) if val.is_object() && bval.is_object() => Line::wrap(
                 diff(val, &bval).expect("Invalid input"),
                 &format!("\"{}\": ", key),
             ),
@@ -49,9 +51,9 @@ fn diff_array(a: &[Value], b: &[Value]) -> Vec<Line> {
         let zip = zip_to_end(a.to_vec(), b.to_vec());
         zip.iter()
             .flat_map(|(a, b)| match (a, b) {
-                (Some(a), Some(b)) => wrap(diff(a, b).unwrap(), ""),
-                (Some(a), None) => wrap(diff(a, &empty_map).unwrap(), ""),
-                (None, Some(b)) => wrap(diff(&empty_map, b).unwrap(), ""),
+                (Some(a), Some(b)) => Line::wrap(diff(a, b).unwrap(), ""),
+                (Some(a), None) => Line::wrap(diff(a, &empty_map).unwrap(), ""),
+                (None, Some(b)) => Line::wrap(diff(&empty_map, b).unwrap(), ""),
                 _ => vec![],
             }).collect()
     } else {

@@ -3,4 +3,8 @@ extern crate serde_json;
 
 pub mod parser;
 
-pub mod util;
+mod util;
+
+mod line;
+
+pub mod pair;

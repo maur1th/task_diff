@@ -11,7 +11,7 @@ extern crate colored;
 use colored::*;
 
 extern crate task_diff;
-use task_diff::{parser, util};
+use task_diff::{pair::Pair, parser};
 
 fn get_input() -> String {
     // Setup ncurses
@@ -45,7 +45,7 @@ fn get_input() -> String {
 
 fn run_app() -> io::Result<()> {
     let input = get_input();
-    let pair = util::Pair::new(unescape(&input).expect("Invalid input").as_str())?;
+    let pair = Pair::new(unescape(&input).expect("Invalid input").as_str())?;
     let result = parser::diff(&pair.a, &pair.b)?;
     for line in result {
         let color = match line.diff {
