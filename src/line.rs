@@ -24,17 +24,26 @@ impl Line {
             contents,
         }
     }
+}
 
-    pub fn wrap(lines: Vec<Line>, name: &str) -> Vec<Line> {
-        let mut result: Vec<Line> = vec![];
-        if !lines.is_empty() {
-            result.push(Line::new('.', format!("{}{{", name)));
-            for mut line in lines {
-                line.depth += 1;
-                result.push(line);
-            }
-            result.push(Line::new('.', "}".to_owned()));
+pub enum WrapperKind {
+    Array,
+    Object,
+}
+
+pub fn wrap(lines: Vec<Line>, name: &str, kind: WrapperKind) -> Vec<Line> {
+    let (d1, d2) = match kind {
+        WrapperKind::Array => ('[', ']'),
+        WrapperKind::Object => ('{', '}'),
+    };
+    let mut result: Vec<Line> = vec![];
+    if !lines.is_empty() {
+        result.push(Line::new('.', format!("{}{}", name, d1)));
+        for mut line in lines {
+            line.depth += 1;
+            result.push(line);
         }
-        result
+        result.push(Line::new('.', format!("{}", d2)));
     }
+    result
 }

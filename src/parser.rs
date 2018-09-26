@@ -4,7 +4,7 @@ use serde_json::{self, Map, Value};
 
 use util::zip_to_end;
 
-use line::Line;
+use line::{wrap, Line, WrapperKind};
 
 //
 // Entrypoint function
@@ -31,9 +31,15 @@ fn diff_obj(a: &Map<String, Value>, b: &Map<String, Value>) -> Vec<Line> {
         .iter()
         .flat_map(|(key, val)| match b2.remove(key) {
             Some(ref bval) if val == bval => vec![Line::new('x', String::new())],
-            Some(ref bval) if val.is_object() && bval.is_object() => Line::wrap(
+            Some(ref bval) if val.is_object() && bval.is_object() => wrap(
                 diff(val, &bval).expect("Invalid input"),
                 &format!("\"{}\": ", key),
+                WrapperKind::Object,
+            ),
+            Some(ref bval) if val.is_array() && bval.is_array() => wrap(
+                diff(val, &bval).expect("Invalid input"),
+                &format!("\"{}\": ", key),
+                WrapperKind::Array,
             ),
             Some(bval) => vec![Line::new('~', format!(r#""{}": {} => {}"#, key, val, bval))],
             _ => vec![Line::new('-', format!(r#""{}": {}"#, key, val))],
@@ -51,9 +57,9 @@ fn diff_array(a: &[Value], b: &[Value]) -> Vec<Line> {
         let zip = zip_to_end(a.to_vec(), b.to_vec());
         zip.iter()
             .flat_map(|(a, b)| match (a, b) {
-                (Some(a), Some(b)) => Line::wrap(diff(a, b).unwrap(), ""),
-                (Some(a), None) => Line::wrap(diff(a, &empty_map).unwrap(), ""),
-                (None, Some(b)) => Line::wrap(diff(&empty_map, b).unwrap(), ""),
+                (Some(a), Some(b)) => wrap(diff(a, b).unwrap(), "", WrapperKind::Object),
+                (Some(a), None) => wrap(diff(a, &empty_map).unwrap(), "", WrapperKind::Object),
+                (None, Some(b)) => wrap(diff(&empty_map, b).unwrap(), "", WrapperKind::Object),
                 _ => vec![],
             }).collect()
     } else {
