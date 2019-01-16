@@ -2,9 +2,9 @@ use std::io::{self, Error, ErrorKind};
 
 use serde_json::{self, Map, Value};
 
-use util::zip_to_end;
+use crate::util::zip_to_end;
 
-use line::{wrap, Line, WrapperKind};
+use crate::line::{wrap, Line, WrapperKind};
 
 //
 // Entrypoint function
