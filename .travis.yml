@@ -8,6 +8,9 @@ matrix:
     - rust: nightly
   fast_finish: true
 
+after_success:
+  - scripts/push_version.sh
+
 before_deploy:
   - cargo build --release
   - mv target/release/{main,task_diff}
